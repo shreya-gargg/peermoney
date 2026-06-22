@@ -81,6 +81,23 @@ function DashboardTab({ userData, peers }: { userData: UserData; peers: any[] })
     ? Math.round(peers.reduce((s, p) => s + p.net_worth, 0) / peers.length)
     : null;
 
+  // Draw a "U" marker for the "You" point instead of a plain circle
+  function makeUMarker(color: string, size = 22): HTMLCanvasElement | undefined {
+    if (typeof document === 'undefined') return undefined;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return undefined;
+    ctx.fillStyle = color;
+    ctx.font = `700 ${Math.round(size * 0.78)}px DM Sans, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('U', size / 2, size / 2 + 1);
+    return canvas;
+  }
+  const youMarker = makeUMarker(C.green);
+
   // Scatter data
   const scatterDatasets = [
     {
@@ -94,52 +111,11 @@ function DashboardTab({ userData, peers }: { userData: UserData; peers: any[] })
       label: 'You',
       data: [{ x: userData.income, y: userData.net_worth }],
       backgroundColor: C.green,
-      pointRadius: 7,
-      pointHoverRadius: 9,
+      pointStyle: youMarker ?? 'circle',
+      pointRadius: youMarker ? 11 : 7,
+      pointHoverRadius: youMarker ? 13 : 9,
     },
-    ...(avgIncome !== null && avgSaved !== null ? [{
-      label: 'Average',
-      data: [{ x: avgIncome, y: avgSaved }],
-      backgroundColor: C.noir,
-      pointRadius: 8,
-      pointHoverRadius: 10,
-      pointStyle: 'crossRot' as const,
-      borderColor: C.noir,
-      borderWidth: 2.5,
-    }] : []),
   ];
-
-  const avgLabelPlugin = avgIncome !== null && avgSaved !== null ? {
-    id: 'avgLabel',
-    afterDraw(chart: any) {
-      const { ctx, scales } = chart;
-      const px = scales.x.getPixelForValue(avgIncome);
-      const py = scales.y.getPixelForValue(avgSaved);
-      const line1 = `Avg income: ${fmt(avgIncome)}`;
-      const line2 = `Avg saved: ${fmt(avgSaved)}`;
-      const pad = 7;
-      const fSize = 11;
-      ctx.save();
-      ctx.font = `500 ${fSize}px DM Sans, sans-serif`;
-      const w = Math.max(ctx.measureText(line1).width, ctx.measureText(line2).width) + pad * 2;
-      const h = fSize * 2 + pad * 2 + 4;
-      let bx = px + 12;
-      let by = py - h - 6;
-      if (bx + w > chart.width - 4) bx = px - w - 12;
-      if (by < 4) by = py + 14;
-      ctx.fillStyle = 'rgba(255,255,255,0.92)';
-      ctx.strokeStyle = C.noir;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.roundRect(bx, by, w, h, 5);
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = C.noir;
-      ctx.fillText(line1, bx + pad, by + pad + fSize - 1);
-      ctx.fillText(line2, bx + pad, by + pad + fSize * 2 + 3);
-      ctx.restore();
-    },
-  } : null;
 
 
 
@@ -364,7 +340,6 @@ function DashboardTab({ userData, peers }: { userData: UserData; peers: any[] })
         <p style={{ fontSize: 14, fontWeight: 600, color: C.green, marginBottom: 8 }}>Where You Stand</p>
         <div style={{ flex: 1, minHeight: 180 }}>
           <Scatter
-            plugins={avgLabelPlugin ? [avgLabelPlugin] : []}
             data={{ datasets: scatterDatasets }}
             options={{
               maintainAspectRatio: false,
@@ -384,7 +359,6 @@ function DashboardTab({ userData, peers }: { userData: UserData; peers: any[] })
                   callbacks: {
                     label: ctx => {
                       if (ctx.datasetIndex === 1) return `You — ${fmt(userData.net_worth)} saved`;
-                      if (ctx.datasetIndex === 2) return `Avg — ${fmt(avgIncome!)} income / ${fmt(avgSaved!)} saved`;
                       return `${fmt(ctx.parsed.y ?? 0)} saved`;
                     },
                   },
@@ -413,13 +387,13 @@ function DashboardTab({ userData, peers }: { userData: UserData; peers: any[] })
           return (
             <div style={{ display: 'flex', gap: 12, marginTop: 10, flexWrap: 'wrap' }}>
               <div style={{ flex: 1, minWidth: 120 }}>
-                <p style={{ fontSize: 11, fontWeight: 700, color: C.noir, margin: '0 0 2px' }}>Average income: {fmt(avgIncome)}</p>
+                <p style={{ fontSize: 11, fontWeight: 700, color: C.green, margin: '0 0 2px' }}>Average income: {fmt(avgIncome)}</p>
                 <p style={{ fontSize: 11, color: incomeDiff >= 0 ? C.moss : C.errorRed, margin: 0 }}>
                   You earn {fmt(Math.abs(incomeDiff))} {incomeDiff >= 0 ? 'above' : 'below'} average
                 </p>
               </div>
               <div style={{ flex: 1, minWidth: 120 }}>
-                <p style={{ fontSize: 11, fontWeight: 700, color: C.noir, margin: '0 0 2px' }}>Average money saved: {fmt(avgSaved)}</p>
+                <p style={{ fontSize: 11, fontWeight: 700, color: C.green, margin: '0 0 2px' }}>Average money saved: {fmt(avgSaved)}</p>
                 <p style={{ fontSize: 11, color: savedDiff >= 0 ? C.moss : C.errorRed, margin: 0 }}>
                   You have {fmt(Math.abs(savedDiff))} {savedDiff >= 0 ? 'more' : 'less'} saved than average
                 </p>
