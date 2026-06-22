@@ -395,7 +395,6 @@ function DashboardTab({ userData, peers }: { userData: UserData; peers: any[] })
             {PORTFOLIO_CATEGORIES.map(({ key, label }) => {
               const them = topAlloc[key];
               const you = userData[key as keyof UserData] as number;
-              const diff = them - you;
               return (
                 <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                   <span style={{ fontSize: 12, color: C.noir, fontWeight: 500, minWidth: 96 }}>{label}</span>
@@ -403,23 +402,18 @@ function DashboardTab({ userData, peers }: { userData: UserData; peers: any[] })
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
                       <span style={{ fontSize: 10, color: C.green, minWidth: 28 }}>Peers</span>
                       <div style={{ flex: 1, height: 8, background: C.bone, borderRadius: 4, overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${them}%`, background: C.green, borderRadius: 4 }} />
+                        <div style={{ height: '100%', width: '100%', background: C.green, borderRadius: 4 }} />
                       </div>
                       <span style={{ fontSize: 11, fontWeight: 600, color: C.green, minWidth: 30, textAlign: 'right' }}>{them}%</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 10, color: C.cedar, minWidth: 28 }}>You</span>
                       <div style={{ flex: 1, height: 8, background: C.bone, borderRadius: 4, overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${you}%`, background: C.cedar, borderRadius: 4 }} />
+                        <div style={{ height: '100%', width: '100%', background: C.cedar, borderRadius: 4 }} />
                       </div>
                       <span style={{ fontSize: 11, fontWeight: 600, color: C.cedar, minWidth: 30, textAlign: 'right' }}>{you}%</span>
                     </div>
                   </div>
-                  {Math.abs(diff) > 5 && (
-                    <span style={{ fontSize: 10, color: diff > 0 ? C.moss : C.errorRed, minWidth: 44, textAlign: 'right', fontWeight: 600 }}>
-                      {diff > 0 ? `+${diff}%` : `${diff}%`}
-                    </span>
-                  )}
                 </div>
               );
             })}
