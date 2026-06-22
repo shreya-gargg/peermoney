@@ -202,7 +202,7 @@ function DashboardTab({ userData, peers }: { userData: UserData; peers: any[] })
       body: `Financial guidelines suggest keeping bonds under 20% before age 40. You're at ${userData.bonds}% — appropriate for someone protecting wealth near retirement, but limiting at ${userData.age} when you still have decades of compounding ahead.${peerContext}`,
       more: `Bonds reduce volatility, which sounds appealing — but at your age, volatility is manageable over time and the cost of avoiding it is slower growth. Shifting some bonds toward a diversified equity fund keeps risk reasonable while unlocking much better long-run returns.`,
     };
-  } else if (userData.net_worth < userData.income * 0.5 && userData.age > 24) {
+  } else if (userData.net_worth < userData.income * 0.5) {
     // Low savings rate — the foundation, not the allocation
     priority = {
       head: 'Before optimizing how you invest, save more.',
