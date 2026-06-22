@@ -81,23 +81,6 @@ function DashboardTab({ userData, peers }: { userData: UserData; peers: any[] })
     ? Math.round(peers.reduce((s, p) => s + p.net_worth, 0) / peers.length)
     : null;
 
-  // Draw a "U" marker for the "You" point instead of a plain circle
-  function makeUMarker(color: string, size = 22): HTMLCanvasElement | undefined {
-    if (typeof document === 'undefined') return undefined;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return undefined;
-    ctx.fillStyle = color;
-    ctx.font = `700 ${Math.round(size * 0.78)}px DM Sans, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('U', size / 2, size / 2 + 1);
-    return canvas;
-  }
-  const youMarker = makeUMarker(C.green);
-
   // Scatter data
   const scatterDatasets = [
     {
@@ -111,9 +94,8 @@ function DashboardTab({ userData, peers }: { userData: UserData; peers: any[] })
       label: 'You',
       data: [{ x: userData.income, y: userData.net_worth }],
       backgroundColor: C.green,
-      pointStyle: youMarker ?? 'circle',
-      pointRadius: youMarker ? 11 : 7,
-      pointHoverRadius: youMarker ? 13 : 9,
+      pointRadius: 4,
+      pointHoverRadius: 6,
     },
   ];
 
