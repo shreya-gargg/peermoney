@@ -260,8 +260,32 @@ function DashboardTab({ userData, peers }: { userData: UserData; peers: any[] })
     };
   }
 
+  // Sample-size transparency: below 1,000 peers in this age group, show the actual data range
+  function peerCountBucket(n: number): string | null {
+    if (n < 250) return '0–250';
+    if (n < 500) return '250–500';
+    if (n < 1000) return '500–1,000';
+    return null;
+  }
+  const peerBucket = peerCountBucket(peers.length);
+
   return (
-    <div className="dash-grid">
+    <div className="dash-page">
+      {peerBucket && (
+        <div style={{
+          background: 'rgba(149, 149, 129, 0.15)',
+          border: `1px solid ${C.border}`,
+          borderRadius: 10,
+          padding: '8px 16px',
+          margin: '12px 12px 0',
+          fontSize: 12,
+          color: C.noir,
+          lineHeight: 1.5,
+        }}>
+          PeerMoney is in its early stages and still gathering users. Data for age {userData.age} is currently based on a sample of {peerBucket} users — insights below will get more reliable as more people join.
+        </div>
+      )}
+      <div className="dash-grid">
 
       {/* Q1 — Portfolio vs. Others */}
       <Card style={{ overflow: 'auto', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
@@ -500,6 +524,7 @@ function DashboardTab({ userData, peers }: { userData: UserData; peers: any[] })
         </button>
       </Card>
 
+      </div>
     </div>
   );
 }

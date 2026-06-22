@@ -44,6 +44,19 @@ input[type="number"]::-webkit-outer-spin-button {
   }
 }
 
+/* Dashboard page wrapper — banner (optional) + grid stacked, sharing the available height */
+.dash-page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .dash-page {
+    height: calc(100vh - 30px);
+  }
+}
+
 /* Dashboard quadrant grid */
 .dash-grid {
   display: grid;
@@ -60,7 +73,8 @@ input[type="number"]::-webkit-outer-spin-button {
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr 1fr;
     width: 100%;
-    height: calc(100vh - 30px);
+    flex: 1;
+    min-height: 0;
     padding: 14px;
     gap: 12px;
     overflow: hidden;
