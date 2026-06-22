@@ -320,18 +320,41 @@ function DashboardTab({ userData, peers }: { userData: UserData; peers: any[] })
           );
         })}
         {peers.length > 0 && (() => {
-          let biggestGap = 0; let biggestKey: AllocKey = 'stocks';
-          for (const { key } of PORTFOLIO_CATEGORIES) {
-            const gap = Math.abs((userData[key as keyof UserData] as number) - (peerAvg[key] ?? 0));
-            if (gap > biggestGap) { biggestGap = gap; biggestKey = key; }
-          }
-          const label = PORTFOLIO_CATEGORIES.find(c => c.key === biggestKey)!.label;
-          const userPct = userData[biggestKey as keyof UserData] as number;
-          const peerPct = peerAvg[biggestKey] ?? 0;
-          if (biggestGap <= 5) return null;
+          // "Am I normal or an outlier?" — describe deviation from peers + what it implies (growth vs. safety net)
+          const FRAGMENT: Record<AllocKey, { more: string; less: string }> = {
+            stocks: { more: 'more in stocks', less: 'less in stocks' },
+            cash: { more: 'more in cash', less: 'less in cash' },
+            bonds: { more: 'more in bonds', less: 'less in bonds' },
+            mutual_funds: { more: 'more in mutual funds', less: 'less in mutual funds' },
+          };
+          const IMPLICATION: Record<AllocKey, { more: string; less: string }> = {
+            stocks: { more: 'higher growth potential', less: 'a more conservative growth path' },
+            cash: { more: 'a bigger safety net, but slower growth', less: 'less of a safety net if you need money quickly' },
+            bonds: { more: 'more stability, but less growth potential', less: 'less of a cushion against market swings' },
+            mutual_funds: { more: 'more built-in diversification', less: 'less built-in diversification' },
+          };
+
+          const gaps = PORTFOLIO_CATEGORIES
+            .map(({ key }) => ({ key: key as AllocKey, gap: (userData[key as keyof UserData] as number) - (peerAvg[key] ?? 0) }))
+            .filter(g => Math.abs(g.gap) > 10)
+            .sort((a, b) => Math.abs(b.gap) - Math.abs(a.gap))
+            .slice(0, 2);
+
+          if (gaps.length === 0) return (
+            <p style={{ fontSize: 11, color: C.moss, marginTop: 8, lineHeight: 1.5 }}>
+              Your allocation closely mirrors your peers — you're not an outlier in either direction.
+            </p>
+          );
+
+          const dir = (g: typeof gaps[number]) => g.gap > 0 ? 'more' as const : 'less' as const;
+          const fragments = gaps.map(g => FRAGMENT[g.key][dir(g)]);
+          const implications = gaps.map(g => IMPLICATION[g.key][dir(g)]);
+          const fragText = fragments.length === 2 ? `${fragments[0]} and ${fragments[1]}` : fragments[0];
+          const implText = implications.length === 2 ? `${implications[0]}, but ${implications[1]}` : implications[0];
+
           return (
             <p style={{ fontSize: 11, color: C.moss, marginTop: 8, lineHeight: 1.5 }}>
-              Biggest gap: <strong>{label}</strong> — you're {userPct > peerPct ? `${biggestGap}% above` : `${biggestGap}% below`} the peer average.
+              You hold significantly {fragText} than your peers. That means {implText}.
             </p>
           );
         })()}
@@ -446,28 +469,29 @@ function DashboardTab({ userData, peers }: { userData: UserData; peers: any[] })
                 // Sort all gaps by magnitude — biggest difference gets addressed first
                 const gapInsights: { magnitude: number; text: string }[] = [];
 
-                for (const { key, label } of PORTFOLIO_CATEGORIES) {
+                // "What should I aspire to?" — frame around the behavior gap, always end with a concrete suggestion
+                for (const { key } of PORTFOLIO_CATEGORIES) {
                   const them = topAlloc[key];
                   const you = userData[key as keyof UserData] as number;
                   const diff = them - you; // positive = top savers have more
                   if (Math.abs(diff) < 6) continue;
                   let text = '';
                   if (key === 'stocks' && diff > 0)
-                    text = `Top savers put ${them}% in stocks — ${diff}% more than your ${you}%. At ${userData.age}, stocks are the primary engine of long-term growth.`;
+                    text = `Top savers your age keep ${them}% in stocks — ${diff}% more than your ${you}%. Consider gradually shifting some cash or bonds toward a low-cost index fund to close that gap.`;
                   else if (key === 'stocks' && diff < 0)
-                    text = `You hold more stocks (${you}%) than top savers (${them}%). That's strong growth exposure — make sure your risk tolerance matches.`;
-                  else if (key === 'cash' && diff < 0)
-                    text = `You keep ${you}% in cash vs their ${them}%. That ${Math.abs(diff)}% extra sitting idle loses value to inflation every year instead of growing.`;
+                    text = `Even top savers your age keep some balance — they hold ${them}% in stocks vs your ${you}%. Consider whether your higher stock exposure matches how much volatility you're comfortable with.`;
                   else if (key === 'cash' && diff > 0)
-                    text = `Top savers hold more cash (${them}%) than you (${you}%) — they may be building an emergency fund before investing more.`;
+                    text = `Top savers your age aren't fully invested either — even they keep a ${them}% cash cushion. Consider building a small buffer before pushing further into stocks.`;
+                  else if (key === 'cash' && diff < 0)
+                    text = `Top savers keep cash lean — around ${them}% vs your ${you}%. Consider moving some of that idle cash into an index fund to put it to work.`;
                   else if (key === 'mutual_funds' && diff > 0)
-                    text = `Top savers put ${them}% in mutual funds vs your ${you}%. Diversified funds spread risk across hundreds of assets automatically.`;
+                    text = `Top savers diversify more through mutual funds — ${them}% vs your ${you}%. Consider adding a diversified fund to reduce reliance on individual stock picks.`;
+                  else if (key === 'mutual_funds' && diff < 0)
+                    text = `You diversify more through mutual funds than top savers do (${you}% vs ${them}%) — a reasonable, lower-maintenance approach. Consider keeping this as a core holding as you grow your portfolio.`;
                   else if (key === 'bonds' && diff < 0)
-                    text = `You hold ${you}% in bonds vs top savers' ${them}%. At your age, that conservatism may be limiting your growth potential.`;
+                    text = `Top savers hold less in bonds than you (${them}% vs your ${you}%) — they're prioritizing growth more at this age. Consider whether shifting some bonds toward stocks fits your goals.`;
                   else
-                    text = diff > 0
-                      ? `Top savers hold ${diff}% more in ${label} (${them}% vs your ${you}%) — worth considering for your mix.`
-                      : `You hold ${Math.abs(diff)}% more in ${label} than top savers (${you}% vs ${them}%).`;
+                    text = `Top savers keep a bit more in bonds than you (${them}% vs your ${you}%) for stability. Consider a small bond allocation as a buffer against market swings.`;
                   gapInsights.push({ magnitude: Math.abs(diff), text });
                 }
 
@@ -478,8 +502,8 @@ function DashboardTab({ userData, peers }: { userData: UserData; peers: any[] })
                   gapInsights.push({
                     magnitude: Math.abs(ratioDiff) * 20, // scale so it competes with allocation gaps
                     text: ratioDiff > 0.15
-                      ? `Top savers have saved ${r}× their annual income — you're at ${u}×. The gap is more about saving consistently than how you invest.`
-                      : `They've saved ${r}× their income, you're at ${u}×. Your savings pace is close to theirs — allocation is the main lever now.`,
+                      ? `Top savers have saved ${r}× their annual income — you're at ${u}×. Consider automating a fixed transfer to savings each payday; consistency matters more than any single investment choice.`
+                      : `Top savers have saved ${r}× their income, you're at ${u}× — a similar pace. Consider keeping your current savings habit steady as your income grows.`,
                   });
                 }
 
@@ -489,7 +513,7 @@ function DashboardTab({ userData, peers }: { userData: UserData; peers: any[] })
                   return (
                     <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                       <span style={{ color: C.moss, fontSize: 13, lineHeight: 1 }}>→</span>
-                      <p style={{ fontSize: 11, color: C.noir, lineHeight: 1.6, margin: 0 }}>Your allocation already closely mirrors what top savers your age are doing.</p>
+                      <p style={{ fontSize: 11, color: C.noir, lineHeight: 1.6, margin: 0 }}>Your allocation already closely mirrors what top savers your age are doing. Consider keeping this consistency as your income and savings grow.</p>
                     </div>
                   );
 
