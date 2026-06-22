@@ -401,7 +401,7 @@ function DashboardTab({ userData, peers }: { userData: UserData; peers: any[] })
                   <span style={{ fontSize: 12, color: C.noir, fontWeight: 500, minWidth: 96 }}>{label}</span>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                      <span style={{ fontSize: 10, color: C.green, minWidth: 28 }}>Them</span>
+                      <span style={{ fontSize: 10, color: C.green, minWidth: 28 }}>Peers</span>
                       <div style={{ flex: 1, height: 8, background: C.bone, borderRadius: 4, overflow: 'hidden' }}>
                         <div style={{ height: '100%', width: `${them}%`, background: C.green, borderRadius: 4 }} />
                       </div>
