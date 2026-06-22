@@ -152,23 +152,23 @@ function DashboardTab({ userData, peers }: { userData: UserData; peers: any[] })
     return `You hold ${Math.abs(gap)}% more in ${label} than your peers.`;
   }
 
-  // Priority — grounded in established financial guidelines, peer data used as context only
-  const pa = peerAvg;
+  // Priority — grounded in established financial guidelines
+  const cashThreshold = 15;
+  const bondsThreshold = 20;
 
   // Guideline: (110 − age)% in growth assets (stocks + mutual funds) — classic age-based rule
-  const targetEquityPct = Math.max(50, 110 - userData.age);
+  const targetEquityPct = 110 - userData.age;
   const actualEquityPct = userData.stocks + userData.mutual_funds;
   const equityGap = targetEquityPct - actualEquityPct; // positive = below target
 
   // Guideline: cash in investment portfolio should stay under 15%
-  const excessCash = userData.cash - 15;
+  const excessCash = userData.cash - cashThreshold;
 
   // Guideline: bonds under 40 should be under 20%
-  const excessBonds = userData.bonds - 20;
+  const excessBonds = userData.bonds - bondsThreshold;
 
-  // Savings rate: net_worth vs income, relevant after age 24
-  const userSavingsRatioPriority = userData.net_worth / Math.max(userData.income, 1);
-  const monthly = fmt(Math.round(userData.income * 0.05 / 12));
+  // Savings rate as a % of income — applies to everyone, no age gate
+  const savingsRatioPct = Math.round((userData.net_worth / Math.max(userData.income, 1)) * 100);
 
   let priority = {
     head: 'Time is your biggest asset right now.',
@@ -178,42 +178,38 @@ function DashboardTab({ userData, peers }: { userData: UserData; peers: any[] })
 
   if (excessCash >= 10) {
     // Cash above 15% is the clearest drag — guideline says keep it lean
-    const idle = Math.round((userData.cash / 100) * userData.net_worth);
-    const drag = fmt(Math.round(idle * 0.03));
-    const peerContext = pa.cash ? ` Your peers average ${pa.cash}% — even that may be high, but you're ${userData.cash - pa.cash}% above them.` : '';
+    const estimatedCost = Math.round((userData.net_worth * excessCash / 100) * 0.07);
     priority = {
       head: 'Too much cash is quietly costing you.',
-      body: `Financial guidelines suggest keeping investment portfolio cash under 15%. You're at ${userData.cash}% — ${excessCash}% above that. At ~3% annual inflation, that's roughly ${drag}/year in purchasing power you're losing by not investing it.${peerContext}`,
+      body: `Your cash position is ${userData.cash}% — that's ${excessCash} points above the ${cashThreshold}% guideline for your age. Holding that much in cash means missing out on growth: based on your ${fmt(userData.net_worth)} net worth, that excess cash could be costing you roughly ${fmt(estimatedCost)}/year in missed returns.`,
       more: `Cash feels safe, but it's the only asset guaranteed to lose value over time. An emergency fund (3–6 months of expenses) in a high-yield savings account makes sense — anything beyond that in your investment portfolio is drag. A broad index fund like VTI has returned 7–10% annually over the long run.`,
     };
   } else if (equityGap >= 20 && userData.age < 50) {
     // Significantly below the age-appropriate equity target
-    const peerContext = pa.stocks ? ` Your peers average ${pa.stocks}% in stocks alone — the guideline accounts for both stocks and mutual funds combined.` : '';
     priority = {
       head: 'Your portfolio is more conservative than your age calls for.',
-      body: `A widely used guideline is to keep (110 − your age)% in growth assets — for you at ${userData.age}, that's ~${targetEquityPct}%. Your stocks + mutual funds total ${actualEquityPct}%, which is ${equityGap}% below that target.${peerContext}`,
+      body: `You're at ${actualEquityPct}% in stocks and mutual funds, well below the ${targetEquityPct}% benchmark for someone your age. Closing even half that gap could meaningfully change your long-term growth.`,
       more: `This isn't about taking reckless risk — it's about using time as a compounding advantage. At ${userData.age} you have decades to ride out market dips. A portfolio too heavy in cash or bonds at your age sacrifices the long-term growth that equities provide.`,
     };
   } else if (excessBonds >= 15 && userData.age < 40) {
     // Bonds are appropriate for preservation, not growth at a young age
-    const peerContext = pa.bonds ? ` Your peers average ${pa.bonds}% in bonds — the guideline suggests under 20% is appropriate for your age.` : '';
     priority = {
       head: 'Your bond allocation is built for retirement, not growth.',
-      body: `Financial guidelines suggest keeping bonds under 20% before age 40. You're at ${userData.bonds}% — appropriate for someone protecting wealth near retirement, but limiting at ${userData.age} when you still have decades of compounding ahead.${peerContext}`,
+      body: `Your bonds are at ${userData.bonds}%, above the ${bondsThreshold}% guideline for your age. At ${userData.age}, you likely have time to take on more growth-oriented risk than this allocation reflects.`,
       more: `Bonds reduce volatility, which sounds appealing — but at your age, volatility is manageable over time and the cost of avoiding it is slower growth. Shifting some bonds toward a diversified equity fund keeps risk reasonable while unlocking much better long-run returns.`,
     };
   } else if (userData.net_worth < userData.income * 0.5) {
-    // Low savings rate — the foundation, not the allocation
+    // Low savings rate — the foundation, not the allocation (no age gate)
     priority = {
       head: 'Before optimizing how you invest, save more.',
-      body: `With ${fmt(userData.net_worth)} saved on a ${fmt(userData.income)} income, your savings rate is the highest-leverage thing to fix. Increasing it by 5% — about ${monthly}/month — competes with any allocation improvement you could make.`,
+      body: `Your savings are around ${savingsRatioPct}% of your income — below the 50% benchmark we'd expect at your income level. Even small increases to your monthly savings rate compound significantly over time.`,
       more: `Returns matter, but only on capital you've actually saved. The best-allocated $5,000 grows slower than a mediocre-allocated $15,000. Automating a transfer to savings on payday — before you can spend it — is the single most effective financial habit most people can build.`,
     };
   } else if (actualEquityPct >= targetEquityPct - 10 && excessCash < 5 && excessBonds < 5) {
     // User is actually following sound principles
     priority = {
       head: "Your allocation follows sound principles for your age.",
-      body: `At ${userData.age}, guidelines suggest ~${targetEquityPct}% in growth assets — you're at ${actualEquityPct}%. Your cash and bond levels are reasonable. The main lever now is consistency: keep saving regularly and don't react to short-term market swings.`,
+      body: `You're at ${actualEquityPct}% equity, just ${Math.abs(actualEquityPct - targetEquityPct)} points from the ${targetEquityPct}% target for your age, with low cash and bond drag. Your allocation reflects sound principles for your age — the main lever now is consistency: keep saving regularly and don't react to short-term market swings.`,
       more: `Most wealth is built not by finding the perfect allocation but by staying invested through volatility. A diversified portfolio held consistently for decades outperforms a "perfect" portfolio that gets reallocated every time the market dips.`,
     };
   }
