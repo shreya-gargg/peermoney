@@ -321,12 +321,11 @@ function DashboardTab({ userData, peers }: { userData: UserData; peers: any[] })
         })}
         {peers.length > 0 && (() => {
           // "Am I normal or an outlier?" — describe deviation from peers + what it implies (growth vs. safety net)
-          const FRAGMENT: Record<AllocKey, { more: string; less: string }> = {
-            stocks: { more: 'more in stocks', less: 'less in stocks' },
-            cash: { more: 'more in cash', less: 'less in cash' },
-            bonds: { more: 'more in bonds', less: 'less in bonds' },
-            mutual_funds: { more: 'more in mutual funds', less: 'less in mutual funds' },
+          const CATEGORY_NAME: Record<AllocKey, string> = {
+            stocks: 'stocks', cash: 'cash', bonds: 'bonds', mutual_funds: 'mutual funds',
           };
+          const fragmentFor = (key: AllocKey, gap: number) =>
+            `${Math.abs(gap)}% ${gap > 0 ? 'more' : 'less'} in ${CATEGORY_NAME[key]}`;
           const IMPLICATION: Record<AllocKey, { more: string; less: string }> = {
             stocks: { more: 'higher growth potential', less: 'a more conservative growth path' },
             cash: { more: 'a bigger safety net, but slower growth', less: 'less of a safety net if you need money quickly' },
@@ -347,7 +346,7 @@ function DashboardTab({ userData, peers }: { userData: UserData; peers: any[] })
           );
 
           const dir = (g: typeof gaps[number]) => g.gap > 0 ? 'more' as const : 'less' as const;
-          const fragments = gaps.map(g => FRAGMENT[g.key][dir(g)]);
+          const fragments = gaps.map(g => fragmentFor(g.key, g.gap));
           const implications = gaps.map(g => IMPLICATION[g.key][dir(g)]);
           const fragText = fragments.length === 2 ? `${fragments[0]} and ${fragments[1]}` : fragments[0];
           const implText = implications.length === 2 ? `${implications[0]}, but ${implications[1]}` : implications[0];
