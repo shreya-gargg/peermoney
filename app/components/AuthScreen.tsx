@@ -22,6 +22,7 @@ export default function AuthScreen({ onSuccess }: { onSuccess: () => void }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
 
   async function handleSubmit() {
     if (!email || !password) { setError('Please fill in both fields.'); return; }
@@ -31,8 +32,14 @@ export default function AuthScreen({ onSuccess }: { onSuccess: () => void }) {
     setError('');
 
     if (mode === 'signup') {
-      const { error: err } = await supabase.auth.signUp({ email, password });
+      const { data, error: err } = await supabase.auth.signUp({ email, password });
       if (err) { setError(err.message); setLoading(false); return; }
+      if (data.user && !data.session) {
+        // Email confirmation is required — no session yet, so don't proceed to onSuccess
+        setLoading(false);
+        setNeedsConfirmation(true);
+        return;
+      }
     } else {
       const { error: err } = await supabase.auth.signInWithPassword({ email, password });
       if (err) { setError('Incorrect email or password.'); setLoading(false); return; }
@@ -65,7 +72,22 @@ export default function AuthScreen({ onSuccess }: { onSuccess: () => void }) {
       padding: '2rem',
     }}>
       <div style={{ width: '100%', maxWidth: 400 }}>
-        {mode === 'forgot' ? (
+        {needsConfirmation ? (
+          <>
+            <h2 style={{ fontSize: 28, fontWeight: 600, color: C.green, marginBottom: 6 }}>
+              Check your email
+            </h2>
+            <p style={{ fontSize: 16, color: C.noir, lineHeight: 1.6, marginBottom: 24 }}>
+              We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account, then come back and log in.
+            </p>
+            <button onClick={() => { setNeedsConfirmation(false); setMode('login'); setError(''); }} style={{
+              width: '100%', padding: '14px', background: C.green, color: C.bone,
+              border: 'none', borderRadius: 12, fontSize: 16, fontWeight: 500, cursor: 'pointer',
+            }}>
+              Back to log in →
+            </button>
+          </>
+        ) : mode === 'forgot' ? (
           <>
             <h2 style={{ fontSize: 28, fontWeight: 600, color: C.green, marginBottom: 6 }}>
               Reset your password

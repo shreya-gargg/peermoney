@@ -1,24 +1,8 @@
 'use client';
 import { useState } from 'react';
-import { C, PORTFOLIO_CATEGORIES, AllocKey, AllocState, fmt } from '../lib/constants';
+import { C, PORTFOLIO_CATEGORIES, AllocKey, AllocState, fmt, amountsToPercentages } from '../lib/constants';
 
 const DEFAULT_AMOUNTS: Record<AllocKey, number> = { stocks: 0, bonds: 0, cash: 0, mutual_funds: 0 };
-
-// Convert dollar amounts into whole-number percentages that always sum to 100
-function amountsToPercentages(amounts: Record<AllocKey, number>): AllocState {
-  const keys = PORTFOLIO_CATEGORIES.map(c => c.key) as AllocKey[];
-  const total = keys.reduce((s, k) => s + amounts[k], 0);
-  if (total <= 0) return { stocks: 0, bonds: 0, cash: 0, mutual_funds: 0 };
-
-  const rounded = keys.map(k => Math.round((amounts[k] / total) * 100));
-  const diff = 100 - rounded.reduce((a, b) => a + b, 0);
-  if (diff !== 0) {
-    let largestIdx = 0;
-    keys.forEach((k, i) => { if (amounts[k] > amounts[keys[largestIdx]]) largestIdx = i; });
-    rounded[largestIdx] += diff;
-  }
-  return Object.fromEntries(keys.map((k, i) => [k, rounded[i]])) as AllocState;
-}
 
 export default function Portfolio({ netWorth, onComplete }: { netWorth: number; onComplete: (alloc: AllocState) => void }) {
   const [amounts, setAmounts] = useState<Record<AllocKey, number>>(DEFAULT_AMOUNTS);

@@ -31,6 +31,22 @@ export interface UserData {
   onboarding_complete: boolean;
 }
 
+// Convert dollar amounts into whole-number percentages that always sum to 100
+export function amountsToPercentages(amounts: Record<AllocKey, number>): AllocState {
+  const keys = PORTFOLIO_CATEGORIES.map(c => c.key) as AllocKey[];
+  const total = keys.reduce((s, k) => s + amounts[k], 0);
+  if (total <= 0) return { stocks: 0, bonds: 0, cash: 0, mutual_funds: 0 };
+
+  const rounded = keys.map(k => Math.round((amounts[k] / total) * 100));
+  const diff = 100 - rounded.reduce((a, b) => a + b, 0);
+  if (diff !== 0) {
+    let largestIdx = 0;
+    keys.forEach((k, i) => { if (amounts[k] > amounts[keys[largestIdx]]) largestIdx = i; });
+    rounded[largestIdx] += diff;
+  }
+  return Object.fromEntries(keys.map((k, i) => [k, rounded[i]])) as AllocState;
+}
+
 export function fmt(n: number): string {
   if (n >= 1_000_000) return '$' + (n / 1_000_000).toFixed(1) + 'M';
   if (n >= 1_000) return '$' + Math.round(n / 1_000) + 'K';

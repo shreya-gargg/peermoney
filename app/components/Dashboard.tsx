@@ -4,7 +4,7 @@ import { Scatter } from 'react-chartjs-2';
 import { Chart as ChartJS, LinearScale, PointElement, Tooltip } from 'chart.js';
 import { supabase } from '../lib/supabase';
 import {
-  C, PORTFOLIO_CATEGORIES, AllocKey, AllocState, UserData, fmt,
+  C, PORTFOLIO_CATEGORIES, AllocKey, UserData, fmt, amountsToPercentages,
 } from '../lib/constants';
 
 ChartJS.register(LinearScale, PointElement, Tooltip);
@@ -539,18 +539,26 @@ function ProfileTab({
   }
 
   const [allocEditing, setAllocEditing] = useState(false);
-  const [draftAlloc, setDraftAlloc] = useState<AllocState>({
-    stocks: userData.stocks, bonds: userData.bonds,
-    cash: userData.cash, mutual_funds: userData.mutual_funds,
-  });
 
-  const allocTotal = Object.values(draftAlloc).reduce((a, b) => a + b, 0);
+  function amountsFromCurrent(): Record<AllocKey, number> {
+    return {
+      stocks: Math.round(userData.net_worth * userData.stocks / 100),
+      bonds: Math.round(userData.net_worth * userData.bonds / 100),
+      cash: Math.round(userData.net_worth * userData.cash / 100),
+      mutual_funds: Math.round(userData.net_worth * userData.mutual_funds / 100),
+    };
+  }
+
+  const [draftAmounts, setDraftAmounts] = useState<Record<AllocKey, number>>(amountsFromCurrent());
+  const amountsTotal = Object.values(draftAmounts).reduce((a, b) => a + b, 0);
+  const sliderMax = Math.max(userData.net_worth, 1000);
 
   async function saveAlloc() {
-    if (allocTotal !== 100) return;
+    if (amountsTotal <= 0) return;
     setSaving(true);
-    await supabase.from('users').update(draftAlloc).eq('user_id', userId);
-    onUpdate({ ...userData, ...draftAlloc });
+    const pcts = amountsToPercentages(draftAmounts);
+    await supabase.from('users').update(pcts).eq('user_id', userId);
+    onUpdate({ ...userData, ...pcts });
     setAllocEditing(false);
     setSaving(false);
   }
@@ -610,20 +618,20 @@ function ProfileTab({
       </Card>
 
       <Card>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <span style={{ fontSize: 16, fontWeight: 500, color: C.noir }}>Portfolio allocation</span>
           {!allocEditing ? (
-            <button onClick={() => setAllocEditing(true)} style={{
+            <button onClick={() => { setDraftAmounts(amountsFromCurrent()); setAllocEditing(true); }} style={{
               padding: '6px 14px', background: 'transparent', border: `1px solid ${C.border}`,
               borderRadius: 8, fontSize: 13, cursor: 'pointer', color: C.noir,
             }}>Edit</button>
           ) : (
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={saveAlloc} disabled={allocTotal !== 100 || saving} style={{
-                padding: '6px 14px', background: allocTotal === 100 ? C.green : '#aaa',
-                color: C.bone, border: 'none', borderRadius: 8, fontSize: 13, cursor: allocTotal === 100 ? 'pointer' : 'not-allowed',
+              <button onClick={saveAlloc} disabled={amountsTotal <= 0 || saving} style={{
+                padding: '6px 14px', background: amountsTotal > 0 ? C.green : '#aaa',
+                color: C.bone, border: 'none', borderRadius: 8, fontSize: 13, cursor: amountsTotal > 0 ? 'pointer' : 'not-allowed',
               }}>Save</button>
-              <button onClick={() => { setAllocEditing(false); setDraftAlloc({ stocks: userData.stocks, bonds: userData.bonds, cash: userData.cash, mutual_funds: userData.mutual_funds }); }}
+              <button onClick={() => { setAllocEditing(false); }}
                 style={{
                   padding: '6px 14px', background: 'transparent', border: `1px solid ${C.border}`,
                   borderRadius: 8, fontSize: 13, cursor: 'pointer', color: C.noir,
@@ -632,20 +640,47 @@ function ProfileTab({
           )}
         </div>
 
+        {allocEditing && (
+          <p style={{ fontSize: 13, color: C.moss, marginBottom: 16, lineHeight: 1.5 }}>
+            Enter the dollar amount you have in each category. We'll calculate the percentages for you.
+          </p>
+        )}
+
         {PORTFOLIO_CATEGORIES.map(({ key, label }) => (
-          <div key={key} style={{ marginBottom: 14 }}>
+          <div key={key} style={{ marginBottom: allocEditing ? 20 : 14 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
               <span style={{ fontSize: 14, color: C.noir }}>{label}</span>
-              <span style={{ fontSize: 14, fontWeight: 500, color: C.green }}>
-                {allocEditing ? draftAlloc[key] : userData[key as keyof UserData]}%
-              </span>
+              {!allocEditing && (
+                <span style={{ fontSize: 14, fontWeight: 500, color: C.green }}>
+                  {userData[key as keyof UserData]}%
+                </span>
+              )}
             </div>
             {allocEditing ? (
-              <input type="range" min={0} max={100}
-                value={draftAlloc[key]}
-                onChange={e => setDraftAlloc(a => ({ ...a, [key]: +e.target.value }))}
-                style={{ width: '100%' }}
-              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <input type="range" min={0} max={sliderMax}
+                  value={draftAmounts[key]}
+                  onChange={e => setDraftAmounts(a => ({ ...a, [key]: +e.target.value }))}
+                  style={{ flex: 1 }}
+                />
+                <div style={{ position: 'relative', width: 110 }}>
+                  <span style={{
+                    position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)',
+                    fontSize: 14, color: C.cedar,
+                  }}>$</span>
+                  <input
+                    type="number" min={0}
+                    value={draftAmounts[key] === 0 ? '' : draftAmounts[key]}
+                    placeholder="0"
+                    onChange={e => setDraftAmounts(a => ({ ...a, [key]: e.target.value === '' ? 0 : +e.target.value }))}
+                    style={{
+                      width: '100%', padding: '7px 8px 7px 20px',
+                      fontSize: 14, border: `1px solid ${C.border}`, borderRadius: 8,
+                      background: C.bone, color: C.noir, outline: 'none',
+                    }}
+                  />
+                </div>
+              </div>
             ) : (
               <div style={{ height: 6, background: C.bone, borderRadius: 3, overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${userData[key as keyof UserData]}%`, background: C.moss, borderRadius: 3 }} />
@@ -657,9 +692,9 @@ function ProfileTab({
         {allocEditing && (
           <p style={{
             fontSize: 13, fontWeight: 500, marginTop: 8,
-            color: allocTotal === 100 ? C.moss : C.errorRed,
+            color: amountsTotal > 0 ? C.moss : C.errorRed,
           }}>
-            Total: {allocTotal}% {allocTotal === 100 ? '✓' : allocTotal < 100 ? `— ${100 - allocTotal}% remaining` : `— ${allocTotal - 100}% over`}
+            Total entered: {fmt(amountsTotal)} {amountsTotal > 0 ? '✓' : '— enter at least one amount to continue'}
           </p>
         )}
       </Card>
