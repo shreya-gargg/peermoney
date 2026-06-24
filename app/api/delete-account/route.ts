@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   // We only ever act on this server-verified id, never on anything the client sends directly.
   const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
   if (error || !user) {
-    return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+    return NextResponse.json({ error: 'Invalid session', detail: error?.message, status: error?.status }, { status: 401 });
   }
 
   await supabaseAdmin.from('users').delete().eq('user_id', user.id);
