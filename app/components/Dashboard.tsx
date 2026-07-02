@@ -4,7 +4,7 @@ import { Scatter } from 'react-chartjs-2';
 import { Chart as ChartJS, LinearScale, PointElement, Tooltip } from 'chart.js';
 import { supabase } from '../lib/supabase';
 import {
-  C, PORTFOLIO_CATEGORIES, AllocKey, UserData, fmt, amountsToPercentages,
+  C, PORTFOLIO_CATEGORIES, AllocKey, UserData, fmt, amountsToPercentages, getAgeFromBirthday,
 } from '../lib/constants';
 
 ChartJS.register(LinearScale, PointElement, Tooltip);
@@ -517,7 +517,6 @@ function ProfileTab({
   const [saving, setSaving] = useState(false);
 
   const fields = [
-    { key: 'age', label: 'Age', fmt: (v: number) => `${v} years old` },
     { key: 'income', label: 'Annual income', fmt: fmt },
     { key: 'net_worth', label: 'Money saved', fmt: fmt },
   ];
@@ -567,6 +566,16 @@ function ProfileTab({
       <h2 style={{ fontSize: 22, fontWeight: 600, color: C.green, marginBottom: 24 }}>Your profile</h2>
 
       <Card style={{ marginBottom: 16 }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '12px 0',
+          borderBottom: `1px solid ${C.border}`,
+        }}>
+          <div>
+            <div style={{ fontSize: 13, color: C.moss, marginBottom: 2 }}>Age</div>
+            <div style={{ fontSize: 16, color: C.noir, fontWeight: 500 }}>{userData.age} years old</div>
+          </div>
+        </div>
         {fields.map(({ key, label, fmt: fmtFn }) => (
           <div key={key} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -952,6 +961,18 @@ export default function Dashboard({
   const [tab, setTab] = useState<Tab>('dashboard');
   const [userData, setUserData] = useState<UserData>(initialData);
   const [peers, setPeers] = useState<any[]>([]);
+
+  // Age is derived from birthday, not user-entered — keep the stored age
+  // column (used for peer-matching) in sync in case it's gone stale, e.g. on a birthday.
+  useEffect(() => {
+    if (!userData.birthday) return;
+    const computedAge = getAgeFromBirthday(userData.birthday);
+    if (computedAge !== userData.age) {
+      supabase.from('users').update({ age: computedAge }).eq('user_id', userId).then(() => {
+        setUserData(d => ({ ...d, age: computedAge }));
+      });
+    }
+  }, [userData.birthday, userData.age, userId]);
 
   useEffect(() => {
     const fetchPeers = () =>

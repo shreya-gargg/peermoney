@@ -1,53 +1,68 @@
 'use client';
 import { useState } from 'react';
-import { C } from '../lib/constants';
+import { C, getAgeFromBirthday } from '../lib/constants';
+
+const TODAY = new Date().toISOString().split('T')[0];
 
 const QUESTIONS = [
   {
-    key: 'age',
-    q: 'How old are you?',
-    placeholder: 'e.g. 28',
-    helper: '',
-    validate: (v: number) => v >= 18 && v <= 80 ? null : 'Enter an age between 18 and 80.',
+    key: 'birthday',
+    q: "What's your birthday?",
+    type: 'date' as const,
+    placeholder: '',
+    helper: "We'll calculate your age from this automatically, so you'll never need to update it.",
+    validate: (v: any) => {
+      if (!v) return 'Enter your birthday.';
+      const age = getAgeFromBirthday(v);
+      return age >= 18 && age <= 80 ? null : 'You must be between 18 and 80 years old to use PeerMoney.';
+    },
   },
   {
     key: 'income',
     q: "What's your annual income?",
+    type: 'number' as const,
     placeholder: 'e.g. 75000',
     helper: 'Include salary, freelance, or any regular income',
-    validate: (v: number) => v >= 1000 ? null : 'Enter your annual income.',
+    validate: (v: any) => v >= 1000 ? null : 'Enter your annual income.',
   },
   {
     key: 'net_worth',
     q: "How much money have you saved?",
+    type: 'number' as const,
     placeholder: 'e.g. 45000',
     helper: 'Total savings and investments minus any debts (loans, credit cards)',
-    validate: () => null,
+    validate: (): string | null => null,
   },
 ];
 
 interface Props {
-  onComplete: (data: { age: number; income: number; net_worth: number }) => void;
+  onComplete: (data: { birthday: string; age: number; income: number; net_worth: number }) => void;
 }
 
 export default function Onboarding({ onComplete }: Props) {
   const [step, setStep] = useState(0);
-  const [values, setValues] = useState({ age: '', income: '', net_worth: '' });
+  const [values, setValues] = useState({ birthday: '', income: '', net_worth: '' });
   const [error, setError] = useState('');
 
   const q = QUESTIONS[step];
 
   function handleContinue() {
     const raw = values[q.key as keyof typeof values];
-    if (!raw || isNaN(+raw)) { setError('Please enter a valid number.'); return; }
-    const err = q.validate(+raw);
+    if (!raw) { setError(q.type === 'date' ? 'Please select your birthday.' : 'Please enter a valid number.'); return; }
+    if (q.type === 'number' && isNaN(+raw)) { setError('Please enter a valid number.'); return; }
+    const err = q.validate(q.type === 'date' ? raw : +raw);
     if (err) { setError(err); return; }
     setError('');
 
     if (step < QUESTIONS.length - 1) {
       setStep(s => s + 1);
     } else {
-      onComplete({ age: +values.age, income: +values.income, net_worth: +values.net_worth });
+      onComplete({
+        birthday: values.birthday,
+        age: getAgeFromBirthday(values.birthday),
+        income: +values.income,
+        net_worth: +values.net_worth,
+      });
     }
   }
 
@@ -80,12 +95,13 @@ export default function Onboarding({ onComplete }: Props) {
 
         <input
           key={q.key}
-          type="number"
+          type={q.type === 'date' ? 'date' : 'number'}
           placeholder={q.placeholder}
           value={values[q.key as keyof typeof values]}
           onChange={e => setValues(v => ({ ...v, [q.key]: e.target.value }))}
           onKeyDown={e => e.key === 'Enter' && handleContinue()}
           autoFocus
+          {...(q.type === 'date' ? { max: TODAY } : {})}
           style={{
             width: '100%',
             padding: '16px 20px',

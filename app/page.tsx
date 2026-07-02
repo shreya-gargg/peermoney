@@ -3,20 +3,21 @@
 import { useState, useEffect } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from './lib/supabase';
-import { UserData, AllocState, C } from './lib/constants';
+import { UserData, AllocState, C, getAgeFromBirthday } from './lib/constants';
 import Welcome from './components/Welcome';
 import AuthScreen from './components/AuthScreen';
 import Onboarding from './components/Onboarding';
+import ConfirmBirthday from './components/ConfirmBirthday';
 import Portfolio from './components/Portfolio';
 import Dashboard from './components/Dashboard';
 
-type Screen = 'loading' | 'welcome' | 'auth' | 'onboarding' | 'portfolio' | 'dashboard';
+type Screen = 'loading' | 'welcome' | 'auth' | 'onboarding' | 'confirm-birthday' | 'portfolio' | 'dashboard';
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('loading');
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [onboardingBase, setOnboardingBase] = useState<{ age: number; income: number; net_worth: number } | null>(null);
+  const [onboardingBase, setOnboardingBase] = useState<{ birthday: string; age: number; income: number; net_worth: number } | null>(null);
 
   async function loadUserData(u: User) {
     const { data } = await supabase
@@ -27,9 +28,25 @@ export default function App() {
 
     if (data?.onboarding_complete) {
       setUserData(data);
-      setScreen('dashboard');
+      setScreen(data.birthday ? 'dashboard' : 'confirm-birthday');
     } else {
       setScreen('onboarding');
+    }
+  }
+
+  async function handleBirthdayConfirmed(birthday: string) {
+    if (!user) return;
+    const age = getAgeFromBirthday(birthday);
+    const { data } = await supabase
+      .from('users')
+      .update({ birthday, age })
+      .eq('user_id', user.id)
+      .select()
+      .single();
+
+    if (data) {
+      setUserData(data);
+      setScreen('dashboard');
     }
   }
 
@@ -97,6 +114,7 @@ export default function App() {
 
   if (screen === 'welcome') return <Welcome onStart={() => setScreen('auth')} />;
   if (screen === 'auth') return <AuthScreen onSuccess={handleAuthSuccess} />;
+  if (screen === 'confirm-birthday') return <ConfirmBirthday onComplete={handleBirthdayConfirmed} />;
   if (screen === 'onboarding') {
     return (
       <Onboarding onComplete={base => {

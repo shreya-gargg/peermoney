@@ -21,6 +21,7 @@ export type AllocState = Record<AllocKey, number>;
 
 export interface UserData {
   user_id?: string;
+  birthday: string | null;
   age: number;
   income: number;
   net_worth: number;
@@ -29,6 +30,18 @@ export interface UserData {
   cash: number;
   mutual_funds: number;
   onboarding_complete: boolean;
+}
+
+// Derive current age from a stored birthday (YYYY-MM-DD)
+export function getAgeFromBirthday(birthday: string): number {
+  const today = new Date();
+  const dob = new Date(birthday);
+  let age = today.getFullYear() - dob.getFullYear();
+  const monthDiff = today.getMonth() - dob.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+    age--;
+  }
+  return age;
 }
 
 // Convert dollar amounts into whole-number percentages that always sum to 100
