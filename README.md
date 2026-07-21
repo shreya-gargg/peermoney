@@ -1,36 +1,27 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PeerMoney
 
-## Getting Started
+**[peermoney.app](https://peermoney.app)**
 
-First, run the development server:
+![PeerMoney dashboard](./docs/dashboard-screenshot.png)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Problem
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Most people have no real way to tell if they're financially "on track" — generic advice like "save 20% of your income" doesn't account for age, income level, or what people actually similar to you are doing. Financial planning content is written for averages, not for you specifically, and there's no easy way to see how your actual portfolio and savings stack up against real peers.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+PeerMoney solves this by benchmarking users against anonymized peers in their own age bracket, then translating the gap between "where you are" and "where established financial guidelines say you should be" into one clear, prioritized, dollar-quantified recommendation — not a wall of generic tips.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Features
 
-## Learn More
+- **Auth & onboarding** — email/password signup with confirmation, login, password reset, and a guided onboarding flow that collects birthday (age is derived automatically, never re-entered), income, net worth, and portfolio allocation.
+- **Peer benchmarking** — real-time peer matching by age bracket via a Postgres RPC and Supabase Realtime, so comparisons stay live as peer data changes. Includes sample-size transparency messaging when a cohort is still small.
+- **Personalized insights engine** — a rules-based system that scores a user's allocation against financial guidelines and surfaces one prioritized, plain-language recommendation with dynamically computed figures (e.g. estimated annual cost of holding excess cash).
+- **Data visualization** — an income-vs-net-worth scatter plot and portfolio allocation comparison bars built with Chart.js.
+- **Profile & account management** — editable income/net worth/allocation, read-only derived age, and full account deletion.
 
-To learn more about Next.js, take a look at the following resources:
+## Tech stack
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Framework**: Next.js (App Router), TypeScript, React
+- **Backend**: Supabase — PostgreSQL, Auth, Row-Level Security, Realtime, RPC functions
+- **Styling**: Tailwind CSS
+- **Charts**: Chart.js / react-chartjs-2
+- **Deployment**: Vercel
